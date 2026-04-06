@@ -27,14 +27,12 @@ const userController = {
 
     createUser: async (req, res) => {
         try {
-            console.log("Create Request called!");
             const { FullName, Email, Password, RoleName, Status } = req.body;
 
             const role = await Role.findByName(RoleName);
 
-            console.log("Role found: ", role);
             const newUser = new User(null, FullName, Email, Password, role.RoleID, Status, null, null);
-            console.log("New User: ", newUser);
+
             const result = await User.create(newUser);
             res.status(201).json({ message: 'User created successfully', userId: result.insertId });
         } catch (error) {
@@ -42,17 +40,15 @@ const userController = {
         }
     },
 
+    // Login API Business Logic with JWT Token Assignment
     loginUser: async (req, res) => {
         try {
-            console.log("Login Request called!");
             const { Email, Password } = req.body;
-            console.log(req.body);
-            
+
             const result = await User.login(Email, Password);
             if (result === 0) {
                 return res.status(401).json(result);
             }
-            console.log("Token: ", result);
             
             res.status(200).header("auth-token", result).send("Login successful", { token: result });
         } catch (error) {
@@ -60,22 +56,23 @@ const userController = {
         }
     },
 
+    // Middleware to Verify JWT Token and Authorize User Access to APIs based on User Role
     verifyToken: async (req, res, next) => {
         try {
+            // Get token from Authorization header (Bearer <token>)
             let token = req.headers.authorization;
-
-            console.log("Token : ", token);
             
             if (!token) {
                 return res.status(401).json({ message: 'Access denied. Trying to make Unauthorized Request!' });
             }
-            console.log("Pass 1");
             
+            // Remove 'Bearer ' prefix if present
             token = token.split(' ')[1];
 
-            console.log("Pass 2 : ", token);
-            
+            // Verify token and decode user information
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+            // If token is valid, attach user information to request object and proceed to next middleware or route handler
             if (!decoded) {
                 return res.status(401).json({ message: 'Access denied. Trying to make Unauthorized Request!' });
             }
@@ -86,13 +83,12 @@ const userController = {
         }
     },
 
+    // Middleware to Check if User has Admin Role for Accessing Admin-Only APIs
     isUserAdmin: async (req, res, next) => {
         try {
-            console.log("Admin Check!");
-            
-            console.log(req);
             const roleId = req.user.role;
             const role = await Role.findById(roleId);
+
             if (!role) {
                 return res.status(404).json({ message: 'Role not found' });
             }
@@ -102,10 +98,9 @@ const userController = {
         }
     },
 
+    // Middleware to Check if User has Financial Executive Role for Accessing Financial Executive-Only APIs
     isUserFinancialExcecutive: async (req, res, next) => {
         try {
-            console.log("User : ",req.user);
-            
             const roleId = req.user.role;
             const role = await Role.findById(roleId);
             if (!role) {
@@ -117,10 +112,9 @@ const userController = {
         }
     },
 
+    // Middleware to Check if User has Financial Analyst Role for Accessing Financial Analyst-Only APIs
     isUserFinancialAnalyst: async (req, res, next) => {
         try {
-            console.log(req.user);
-            
             const roleId = req.user.role;
             const role = await Role.findById(roleId);
             if (!role) {
@@ -134,14 +128,14 @@ const userController = {
 
     updateUser: async (req, res) => {
         try {
-            console.log("Update Request called!");
             const userId = req.params.id;
+
             const { FullName, Email, Password, RoleName, Status } = req.body;
             const role = await Role.findByName(RoleName);
 
-            console.log("Role found: ", role);
             const user = new User(userId, FullName, Email, Password, role.RoleID, Status, null, null);
             const result = await User.update(userId, user);
+
             res.json({ message: 'User updated successfully', userId: result.affectedRows });
         } catch (error) {
             res.status(500).json({ message: error.message });

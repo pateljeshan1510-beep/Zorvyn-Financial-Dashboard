@@ -24,13 +24,9 @@ class User {
     static async create(user) {
         const salt = await bcrypt.genSalt(10);
         user.Password = await bcrypt.hash(user.Password, salt);
-        console.log("Hash Password : ", user.Password);
 
         let payload = { id: user.UserID, role: user.RoleID || 0 };
         const token = jwt.sign(payload, process.env.JWT_SECRET);
-
-        console.log(user);
-        console.log("Token: ", token);
 
         const [result] = await dbConnection.execute("INSERT INTO user (FullName, Email, Password, RoleID, Status, CreatedAt, UpdatedAt) VALUES (?, ?, ?, ?, ?, NOW(), NOW())", [user.FullName, user.Email, user.Password, user.RoleID, user.Status]);
         return { result, token };
@@ -43,16 +39,14 @@ class User {
         }
         const user = new User(rows[0].UserID, rows[0].FullName, rows[0].Email, rows[0].Password, rows[0].RoleID, rows[0].Status, rows[0].CreatedOn, rows[0].UpdatedOn);
         const isMatch = await bcrypt.compare(password, user.Password);
-        console.log("Is Match: ", isMatch, " | User Password: ", user.Password, " | Entered Password: ", password   );
+
         if (!isMatch) {
             return 0;
         }
         
-        console.log("Last Step");
-        
         let payload = { id: user.UserID, role: user.RoleID || 0 };
         const token = jwt.sign(payload, process.env.JWT_SECRET);
-        console.log(token);
+        
         return token;
     }
 
